@@ -31,6 +31,7 @@ bool ofxJackClient::setup(string clientName, bool useProcessAudio){
         if(useProcessAudio){
             jack_set_process_callback(client, _process, this);
         }
+        ofLogNotice() << "Jack client setup: " << clientName;
         return true;
     }
 }
@@ -43,7 +44,9 @@ bool ofxJackClient::start(){
     }
     if(jack_activate(client) != 0) {
 		ofLogError() << "Cannot start JACK client: " << getClientName();
-	}
+	}else{
+        ofLogNotice() << "Jack client started: " << getClientName();
+    }
     return true;
 }
 
@@ -156,27 +159,45 @@ bool ofxJackClient::createPort(string portName, JackPortFlags portType){
         return false;
     }
     
+    jack_port_t * port = NULL;
+    
     switch (portType) {
         case JackPortIsInput:
         {
-            inPorts.push_back(jack_port_register (client, portName.c_str(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0));
+            port = jack_port_register (client, portName.c_str(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+            if(port == NULL){
+                ofLogError() << "Can't create in port: " << portName;
+            }else{
+                ofLogVerbose() << "Created in port: " << portName;
+                inPorts.push_back(port);
+            }
             break;
         }
         case JackPortIsOutput:
         {
-            outPorts.push_back(jack_port_register (client, portName.c_str(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0));
+            port = jack_port_register (client, portName.c_str(), JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+            if(port == NULL){
+                ofLogError() << "Can't create out port: " << portName;
+            }else{
+                ofLogVerbose() << "Created out port: " << portName;
+                outPorts.push_back(port);
+            }
             break;
         }
             
     }
+    
+    return (port != NULL);
+    
 }
 
 //--------------------------------------------------------------
 bool ofxJackClient::connect(string inPortName, string outPortName){
     if(jack_connect(client, inPortName.c_str(), outPortName.c_str()) != 0){
-        ofLogError() << "Cannot connect ports: " << inPortName << " with " << outPortName;
+        ofLogError() << "Cannot connect port: " << inPortName << " with " << outPortName;
         return false;
     }else{
+        ofLogVerbose() << "Connected port: " << inPortName << " with " << outPortName;
         return true;
     }
 }
@@ -186,4 +207,34 @@ int ofxJackClient::process(jack_nframes_t nframes){
     // overide this in your client
     ofLogWarning() << "You should either not use process audio or override this function in your client!";
     return 0;
+}
+
+//--------------------------------------------------------------
+string ofxJackClient::getApplicationName(){
+    if(applicationName == ""){
+        getApplicationPath();
+    }
+    return applicationName;
+}
+
+//--------------------------------------------------------------
+string ofxJackClient::getApplicationPath(){
+    // from http://stackoverflow.com/questions/799679/programatically-retrieving-the-absolute-path-of-an-os-x-command-line-app/1024933#1024933
+    if(applicationPath == ""){
+        int ret;
+        pid_t pid; 
+        char pathbuf[1024];
+        pid = getpid();
+        ret = proc_pidpath (pid, pathbuf, sizeof(pathbuf));
+        if(ret <= 0){
+            ofLogError() << "PID " << pid << " proc_pidpath(): " << strerror(errno);
+        }else{
+            applicationPath = string(pathbuf);
+            vector<string> pathParts = ofSplitString(applicationPath, "/");
+            applicationName = pathParts[pathParts.size() - 1];
+            //ofLogVerbose() << "proc " << pid << " path: " << pathbuf;
+        }
+    }
+    
+    return applicationPath;
 }

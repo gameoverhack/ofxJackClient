@@ -10,6 +10,7 @@
 
 #include "ofMain.h"
 #include <jack/jack.h>
+#include <libproc.h>
 
 class ofxJackClient {
     
@@ -35,8 +36,14 @@ public:
     
     virtual int process(jack_nframes_t nframes);
     
+    string getApplicationPath();
+    string getApplicationName();
+    
 protected:
 	
+    string applicationName;
+    string applicationPath;
+    
     jack_client_t *client;
     vector<jack_port_t*> inPorts;
     vector<jack_port_t*> outPorts;
