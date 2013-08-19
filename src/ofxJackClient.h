@@ -41,6 +41,8 @@ public:
     
 protected:
 	
+    string clientName;
+    
     string applicationName;
     string applicationPath;
     

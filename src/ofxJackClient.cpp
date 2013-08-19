@@ -23,14 +23,15 @@ ofxJackClient::~ofxJackClient(){
 }
 
 //--------------------------------------------------------------
-bool ofxJackClient::setup(string clientName, bool useProcessAudio){
-    if ((client = jack_client_open (clientName.c_str(), JackNullOption, NULL)) == NULL) {
+bool ofxJackClient::setup(string _clientName, bool useProcessAudio){
+    if ((client = jack_client_open (_clientName.c_str(), JackNullOption, NULL)) == NULL) {
 		ofLogError() << "JACK server is not running";
 		return false;
 	}else{
         if(useProcessAudio){
             jack_set_process_callback(client, _process, this);
         }
+        clientName = _clientName;
         ofLogNotice() << "Jack client setup: " << clientName;
         return true;
     }
@@ -54,8 +55,25 @@ bool ofxJackClient::start(){
 void ofxJackClient::stop(){
     
     if(client != NULL){
+        
+        const char **ports;
+        
+        ports = jack_get_ports(client, clientName.c_str(), NULL, 0);
+        
+        for (int portIndex = 0; ports[portIndex]; ++portIndex) {
+            
+            jack_port_t *port;
+            
+            port = jack_port_by_name (client, ports[portIndex]);
+            
+            jack_port_disconnect(client, port);
+            
+            jack_port_unregister(client, port);
+            
+        }
+        
         jack_deactivate(client);
-        jack_client_close (client);
+        jack_client_close(client);
         client = NULL;
     }
     inPorts.clear();
