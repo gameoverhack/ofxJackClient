@@ -56,6 +56,8 @@ void ofxJackClient::stop(){
     
     if(client != NULL){
         
+        ofLogNotice() << "Atempting to stop Jack client: " << getClientName();
+        
         const char **ports;
         
         ports = jack_get_ports(client, clientName.c_str(), NULL, 0);
@@ -65,6 +67,8 @@ void ofxJackClient::stop(){
             jack_port_t *port;
             
             port = jack_port_by_name (client, ports[portIndex]);
+            
+            ofLogNotice() << "Disconnecting port: " << ports[portIndex] << endl;
             
             jack_port_disconnect(client, port);
             
